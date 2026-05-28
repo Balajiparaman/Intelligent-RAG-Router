@@ -1,0 +1,45 @@
+Cost-Aware RAG Router & Compliance Gatekeeper
+An asynchronous AI infrastructure proxy built with FastAPI and LangGraph. This middleware optimizes enterprise LLM pipelines by routing simple queries to a specialized, fine-tuned local model while processing complex data queries through an advanced Parent-Child RAG pipeline (ChromaDB) paired with a stateful, self-correcting multi-agent citation audit loop.
+
+Architecture Overview
+
+[ Client Query ]
+                               │
+                               ▼
+                   ┌───────────────────────┐
+                   │   FastAPI Middleware  │
+                   └───────────┬───────────┘
+                               │
+                               ▼
+                   ┌───────────────────────┐
+                   │   Intent Router Node  │
+                   └───────────┬───────────┘
+                               ├──────────────────────────┐
+                (Complex / Data Dependent)            (Casual / Chat)
+                               ▼                          ▼
+             ┌───────────────────────────────────┐   ┌──────────────┐
+             │    LangGraph Agentic Pipeline     │   │ Cheap Local  │
+             │  - Parent-Child RAG (ChromaDB)   │   │ Model Chat   │
+             │  - Self-Correcting Citation Loop │   └──────────────┘
+             └───────────────────────────────────┘
+
+FastAPI Middleware Proxy: Accepts incoming asynchronous streaming client queries.
+
+Intent-Based Cost Routing: A specialized local model classifies query intent. General conversational filler bypasses the vector database completely—minimizing latency and token costs.
+
+Parent-Child Retrieval Strategy: Complex data queries trigger a structural search. Highly semantic sentences ("child chunks") locate specific target data, but inject broader systemic context ("parent chunks") into the agent architecture.
+
+Self-Correcting Auditor Loop: The Researcher Agent generates answers with strict footnote citations. The Auditor Agent cross-examines those citations against raw metadata. If a discrepancy or hallucination is caught, a conditional edge reroutes the state dynamically for self-correction before reaching the user.
+
+Project Directory Structure
+
+cost_aware_rag/
+│
+├── main.py                 # FastAPI Application layer & streaming endpoints
+├── graph.py                # LangGraph node configurations, shared state, and edges
+├── database.py             # ChromaDB vector embedding and ingestion pipeline
+├── router.py               # Fine-tuned intent-classification wrapper logic
+├── data/
+│   └── compliance_docs.txt # Targeted raw unstructured corporate manuals/data
+├── requirements.txt        # System dependency requirements
+└── README.md               # Project documentation
