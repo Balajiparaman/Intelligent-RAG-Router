@@ -81,8 +81,6 @@ def ingest_pdf(pdf_path: str):
 
     collection = get_or_create_collection()
 
-    pages = extract_pages_from_pdf(pdf_path)
-
     #Extract Pages (Parents)
     pages = extract_pages_from_pdf(pdf_path)
 
