@@ -74,12 +74,41 @@ render_sidebar()
 # =====================================================================
 
 # Display past messages from chat history
+# =====================================================================
+# Main Interface: Chat
+# =====================================================================
+
+# Display past messages from chat history
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
-# User Input Box
-if prompt := st.chat_input("Ask a medical coding guideline question or chat casually..."):
+# Show suggested questions ONLY if chat history is empty
+clicked_prompt = None
+if not st.session_state.messages:
+    st.markdown("### 💡 Suggested Questions")
+    st.markdown("Select a question below to test the Cost-Aware RAG Router:")
+    
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button("🤰 COVID-19 sequencing in pregnancy (RAG / Route to page 71)"):
+            clicked_prompt = "What is the specific coding sequencing guideline for a pregnant patient who has COVID-19?"
+        if st.button("🩺 General rules for acute vs chronic (RAG / Route to page 14)"):
+            clicked_prompt = "What is the guideline for coding acute and chronic conditions?"
+    with col2:
+        if st.button("🌡️ Sepsis & Septic shock coding rules (RAG / Route to page 23-24)"):
+            clicked_prompt = "What is the guideline for coding severe sepsis and septic shock?"
+        if st.button("💬 Explain what is medical coding (CHAT / Direct Stream)"):
+            clicked_prompt = "Hello! Can you help me learn about medical coding?"
+
+# User Input Box (Checks if user typed OR clicked a suggested question)
+prompt = st.chat_input("Ask a medical coding guideline question or chat casually...")
+if clicked_prompt:
+    prompt = clicked_prompt
+
+if prompt:
+    # Display user's message
+
     # Display user's message
     with st.chat_message("user"):
         st.markdown(prompt)
