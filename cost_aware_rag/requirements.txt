@@ -9,3 +9,4 @@ pypdf
 python-dotenv
 pydantic
 requests
+streamlit
