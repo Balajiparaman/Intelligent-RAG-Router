@@ -4,7 +4,7 @@ from fastapi import FastAPI
 from fastapi.responses import StreamingResponse 
 from fastapi.middleware.cors import CORSMiddleware 
 from pydantic import BaseModel 
-from langchain_google_genai import ChatGoogleGenerativeAI 
+from langchain_ollama import ChatOllama 
 
 from cost_aware_rag.router import route_query 
 from cost_aware_rag.graph import graph 
@@ -48,7 +48,7 @@ async def generate_chat_stream(message: str):
 
     if decision.intent == "CHAT":
         yield f"data: {json.dumps({'event': 'status', 'message': 'Streaming direct chat response...'})}\n\n"
-        llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash", temperature=0.7)
+        llm = ChatOllama(model="clinical-coder", temperature=0.7)
 
         # Stream the tokens directly from the cheap model
         async for chunk in llm.astream(message):

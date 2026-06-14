@@ -1,7 +1,7 @@
 import os 
 from typing import TypedDict, List, Dict, Any, Literal 
 from pydantic import BaseModel, Field 
-from langchain_google_genai import ChatGoogleGenerativeAI 
+from langchain_ollama import ChatOllama 
 from langchain_core.prompts import ChatPromptTemplate 
 from langgraph.graph import StateGraph, START, END 
 from dotenv import load_dotenv  # <-- Add this import
@@ -31,7 +31,7 @@ class AuditResult(BaseModel):  # Named AuditResult to match usages
 def retrieve_node(state: AgentState) -> Dict[str, Any]:
     """Retrieves relevant guideline pages from ChromaDB."""
     print("\n[Node: Retrieve] Fetching relevant ICD-10 pages from ChromaDB...")
-    docs = query_database(state["query"], n_results=4)
+    docs = query_database(state["query"], n_results=2)
     return {"retrieved_docs": docs}
 
 def researcher_node(state: AgentState) -> Dict[str, Any]:
@@ -39,7 +39,7 @@ def researcher_node(state: AgentState) -> Dict[str, Any]:
     print("\n[Node: Researcher] Writing coding response...")
 
     # Initialize the LLM
-    llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash", temperature=0.2)
+    llm = ChatOllama(model="clinical-coder", temperature=0.2)
 
     # Format the retrieved pages for context - loop ONLY formats text
     context = ""
@@ -49,11 +49,14 @@ def researcher_node(state: AgentState) -> Dict[str, Any]:
     # Now define prompt outside the loop
     system_prompt = (
         "You are an expert ICD-10-CM Medical Coding Researcher.\n"
-        "Your task is to answer the user's coding query using ONLY the provided guideline pages.\n\n"
-        "Strict Citation Rules:\n"
-        "1. For EVERY fact, code, or instruction you state, you MUST add a inline citation referencing the page number, e.g. [Page X].\n"
-        "2. Do NOT mention page numbers that are not present in the context.\n"
-        "3. If the context does not contain enough information to answer, state clearly: 'I don't know' or 'Guidelines for this were not found in the retrieved sections.'\n\n"
+        "Your task is to answer the user's coding query using ONLY the guidelines provided below. Do not assume or extrapolate.\n\n"
+        "Guideline Search Instructions:\n"
+        "1. Carefully scan the guideline pages below to find the specific section matching the user's request (e.g. if looking for 'COVID-19 in pregnancy', look for 'COVID-19 infection in pregnancy').\n"
+        "2. Only extract rules and codes from that specific matching section. Do NOT mention or include rules or codes from unrelated sections (like abuse complicating pregnancy, MRSA, or other conditions) even if they are on the same page. Focus ONLY on the queried topic.\n"
+        "3. Quote the codes (e.g. O98.5-, U07.1) exactly as they appear in the matching section.\n\n"
+        "Citation Rule:\n"
+        "For every rule or code you state, append its page number in brackets, for example: [Page X]. Only use page numbers listed below.\n\n"
+        "If the guidelines do not contain the answer, say 'I don't know'.\n\n"
         f"--- RETRIEVED GUIDELINE PAGES ---\n{context}"
     )
 
@@ -84,7 +87,7 @@ def auditor_node(state: AgentState) -> Dict[str, Any]:
     print("\n[Node: Auditor] Auditing citations and factual alignment...")
 
     # Initialize the LLM with structured output
-    llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash", temperature=0.0)
+    llm = ChatOllama(model="clinical-coder", temperature=0.0)
     structured_llm = llm.with_structured_output(AuditResult)
 
     # Format context pages for the Auditor - loop ONLY formats text
@@ -95,13 +98,12 @@ def auditor_node(state: AgentState) -> Dict[str, Any]:
     # Define system prompt outside the loop
     system_prompt = (
         "You are a strict Medical Coding Citation Compliance Auditor.\n"
-        "Your task is to verify that the Researcher's generated response is 100% accurate and "
-        "has valid citations based ONLY on the provided raw pages.\n\n"
+        "Compare the Researcher's response with the provided raw page guidelines to verify citation alignment.\n\n"
         "Verification Checklist:\n"
-        "1. Check every page cited in brackets (e.g. [Page X]) in the response. Is it present in the raw text?\n"
-        "2. For each cited fact, read the raw text of that specific page. Does it actually support the claim? "
-        "If the Researcher claims a code is required but the page text doesn't say so, mark it as invalid.\n"
-        "3. If the Researcher cited a page that wasn't provided, mark it as invalid.\n\n"
+        "1. Check all bracketed page citations (e.g., [Page X]). Are those page numbers present in the raw text?\n"
+        "2. Read the raw text of the cited page. Does it support the researcher's claim?\n"
+        "3. If the researcher cites a code or section name (e.g., 'Section II.H') that is NOT in the raw text, flag it as invalid.\n\n"
+        "Provide constructive feedback only for the invalid parts, and set is_valid to False if there are any mismatches.\n\n"
         f"--- RAW GUIDELINE PAGES ---\n{context}"
     )
 

@@ -1,7 +1,7 @@
 from importlib import readers
 import os 
 from pydantic import BaseModel, Field 
-from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_ollama import ChatOllama
 from langchain_core.prompts import ChatPromptTemplate
 from dotenv import load_dotenv 
 
@@ -19,7 +19,7 @@ class RoutingDecision(BaseModel):
 def route_query(query: str) -> RoutingDecision:
     """
     Classifies user query and decides whether to use RAG or Chat
-    using Gemini 2.0, cost aware
+    using Ollama, cost aware
 
     Args:
         query: User query to classify
@@ -28,9 +28,8 @@ def route_query(query: str) -> RoutingDecision:
         RoutingDecision object with intent, confidence, and reasoning
     """
 
-     # 1. Initialize our LLM (temperature=0.0 makes the routing deterministic)
-    llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash",
-    temperature=0.0)
+    # 1. Initialize our LLM (temperature=0.0 makes the routing deterministic)
+    llm = ChatOllama(model="clinical-coder", temperature=0.0)
 
     # 2. Bind the pydantic schema to force the model to respond in JSON matching our schema
     structured_llm = llm.with_structured_output(RoutingDecision)

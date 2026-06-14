@@ -10,3 +10,5 @@ python-dotenv
 pydantic
 requests
 streamlit
+reportlab
+langchain-ollama
